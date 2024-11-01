@@ -17,6 +17,7 @@ import (
 	"github.com/Eggi19/simple-social-media/middlewares"
 	"github.com/Eggi19/simple-social-media/repositories"
 	"github.com/Eggi19/simple-social-media/usecases"
+	"github.com/Eggi19/simple-social-media/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,7 +35,10 @@ func createRouter(con config.Config) *gin.Engine {
 	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
 
 	//usecase
-	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{UserRepository: userRepository})
+	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
+		UserRepository: userRepository,
+		HashAlgorithm:  utils.NewBCryptHasher(),
+	})
 
 	//handler
 	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{UserUsecase: userUsecase})
@@ -88,7 +92,8 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	router.Use(middlewares.ErrorHandling)
 
 	// public routers
-	// publicRouter := router.Group("/")
+	publicRouter := router.Group("/")
+	publicRouter.POST("/register", handlers.User.RegisterUser)
 
 	// private routers
 	privateRouter := router.Group(("/"))

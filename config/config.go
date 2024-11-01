@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	DbUrl           string `mapstructure:"DATABASE_URL"`
+	DbUrl           string `mapstructure:"DATABASE_CONFIG"`
 	Port            string `mapstructure:"PORT"`
+	HashCost        int    `mapstructure:"HASH_COST"`
 	Issuer          string `mapstructure:"ISSUER"`
 	ExpDurationHour int    `mapstructure:"EXP_HOUR"`
-	SecretKey       string `mapstructure:"SECRET_KEY"`
+	JwtSecretKey    string `mapstructure:"JWT_SECRET_KEY"`
 }
 
 func ConfigInit() (Config, error) {

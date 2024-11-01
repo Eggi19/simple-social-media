@@ -24,7 +24,7 @@ type JwtProvider struct {
 }
 
 type JwtToken struct {
-	AccessToken  string `json:"token"`
+	AccessToken string `json:"token"`
 }
 
 type ClaimsData struct {
@@ -46,19 +46,19 @@ func (j *JwtProvider) CreateAndSign(data map[string]interface{}) (*JwtToken, err
 		"data": data,
 	})
 
-	signed, err := token.SignedString([]byte(j.config.SecretKey))
+	signed, err := token.SignedString([]byte(j.config.JwtSecretKey))
 	if err != nil {
 		return nil, err
 	}
 
 	return &JwtToken{
-		AccessToken:  signed,
+		AccessToken: signed,
 	}, nil
 }
 
 func (j *JwtProvider) ParseAndVerify(signed string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(signed, func(token *jwt.Token) (interface{}, error) {
-		return []byte(j.config.SecretKey), nil
+		return []byte(j.config.JwtSecretKey), nil
 	}, jwt.WithIssuer(j.config.Issuer),
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
 		jwt.WithExpirationRequired(),
