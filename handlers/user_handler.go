@@ -42,3 +42,23 @@ func (h *UserHandler) RegisterUser(ctx *gin.Context) {
 		Data:    nil,
 	})
 }
+
+func (h *UserHandler) LoginUser(ctx *gin.Context) {
+	var payload dtos.UserLoginRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	token, err := h.UserUsecase.Login(ctx, payload)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dtos.ResponseMessage{
+		Status:  0,
+		Message: constants.ResponseMsgOK,
+		Data:    token,
+	})
+}

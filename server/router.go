@@ -36,8 +36,9 @@ func createRouter(con config.Config) *gin.Engine {
 
 	//usecase
 	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
-		UserRepository: userRepository,
-		HashAlgorithm:  utils.NewBCryptHasher(),
+		HashAlgorithm:     utils.NewBCryptHasher(),
+		AuthTokenProvider: utils.NewJwtProvider(con),
+		UserRepository:    userRepository,
 	})
 
 	//handler
@@ -94,6 +95,7 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	// public routers
 	publicRouter := router.Group("/")
 	publicRouter.POST("/register", handlers.User.RegisterUser)
+	publicRouter.POST("/login", handlers.User.LoginUser)
 
 	// private routers
 	privateRouter := router.Group(("/"))
