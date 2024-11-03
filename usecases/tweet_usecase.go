@@ -6,7 +6,6 @@ import (
 	"github.com/Eggi19/simple-social-media/dtos"
 	"github.com/Eggi19/simple-social-media/entities"
 	"github.com/Eggi19/simple-social-media/repositories"
-	"github.com/Eggi19/simple-social-media/utils"
 )
 
 type TweetUsecaseOpts struct {
@@ -18,8 +17,6 @@ type TweetUsecase interface {
 }
 
 type TweetUsecaseImpl struct {
-	HashAlgorithm     utils.Hasher
-	AuthTokenProvider utils.AuthTokenProvider
 	TweetRepository    repositories.TweetRepository
 }
 

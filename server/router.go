@@ -22,8 +22,9 @@ import (
 )
 
 type RouterOpts struct {
-	User  *handlers.UserHandler
-	Tweet *handlers.TweetHandler
+	User    *handlers.UserHandler
+	Tweet   *handlers.TweetHandler
+	Comment *handlers.CommentHandler
 }
 
 func createRouter(con config.Config) *gin.Engine {
@@ -35,6 +36,7 @@ func createRouter(con config.Config) *gin.Engine {
 	//repository
 	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
 	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{Db: db})
+	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{Db: db})
 
 	//usecase
 	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
@@ -45,14 +47,19 @@ func createRouter(con config.Config) *gin.Engine {
 	tweetUsecase := usecases.NewTweetUsecaseImpl(&usecases.TweetUsecaseOpts{
 		TweetRepository: tweetRepository,
 	})
+	commentUsecase := usecases.NewCommentUsecaseImpl(&usecases.CommentUsecaseOpts{
+		CommentRepository: commentRepository,
+	})
 
 	//handler
 	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{UserUsecase: userUsecase})
 	tweetHandler := handlers.NewTweetHandler(&handlers.TweetHandlerOpts{TweetUsecase: tweetUsecase})
+	commentHandler := handlers.NewCommentHandler(&handlers.CommentHandlerOpts{CommentUsecase: commentUsecase})
 
 	return NewRouter(con, &RouterOpts{
-		User:  userHandler,
-		Tweet: tweetHandler,
+		User:    userHandler,
+		Tweet:   tweetHandler,
+		Comment: commentHandler,
 	})
 }
 
@@ -108,6 +115,7 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	privateRouter := router.Group(("/"))
 	privateRouter.Use(middlewares.JwtAuthMiddleware(config))
 	privateRouter.POST("/tweet", handlers.Tweet.CreateTweet)
+	privateRouter.POST("/comment", handlers.Comment.CreateComment)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})
