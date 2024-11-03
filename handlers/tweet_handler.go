@@ -45,7 +45,7 @@ func (h *TweetHandler) CreateTweet(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dtos.ResponseMessage{
 		Status:  0,
-		Message: constants.ResponseMsgRegistered,
+		Message: constants.ResponseMsgPostTweet,
 		Data:    nil,
 	})
 }
