@@ -22,9 +22,10 @@ import (
 )
 
 type RouterOpts struct {
-	User    *handlers.UserHandler
-	Tweet   *handlers.TweetHandler
-	Comment *handlers.CommentHandler
+	User     *handlers.UserHandler
+	Tweet    *handlers.TweetHandler
+	Comment  *handlers.CommentHandler
+	Firebase *handlers.FirebaseHandler
 }
 
 func createRouter(con config.Config) *gin.Engine {
@@ -43,6 +44,7 @@ func createRouter(con config.Config) *gin.Engine {
 	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
 	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{Db: db})
 	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{Db: db})
+	firebaseRepository := repositories.NewFirebaseRepositoryPostgres(&repositories.FirebaseRepoOpt{FirebaseClient: firebase.Client})
 
 	//usecase
 	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
@@ -57,16 +59,21 @@ func createRouter(con config.Config) *gin.Engine {
 		CommentRepository: commentRepository,
 		FirebaseClient:    firebase.Client,
 	})
+	firebaseUsecase := usecases.NewFirebaseUsecaseImpl(&usecases.FirebaseUsecaseOpts{
+		FirebaseRepository: firebaseRepository,
+	})
 
 	//handler
 	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{UserUsecase: userUsecase})
 	tweetHandler := handlers.NewTweetHandler(&handlers.TweetHandlerOpts{TweetUsecase: tweetUsecase})
 	commentHandler := handlers.NewCommentHandler(&handlers.CommentHandlerOpts{CommentUsecase: commentUsecase})
+	firebaseHandler := handlers.NewFirebaseHandler(&handlers.FirebaseHandlerOpts{FirebaseUsecase: firebaseUsecase})
 
 	return NewRouter(con, &RouterOpts{
-		User:    userHandler,
-		Tweet:   tweetHandler,
-		Comment: commentHandler,
+		User:     userHandler,
+		Tweet:    tweetHandler,
+		Comment:  commentHandler,
+		Firebase: firebaseHandler,
 	})
 }
 
@@ -123,6 +130,8 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	privateRouter.Use(middlewares.JwtAuthMiddleware(config))
 	privateRouter.POST("/tweet", handlers.Tweet.CreateTweet)
 	privateRouter.POST("/comment", handlers.Comment.CreateComment)
+	privateRouter.POST("/firebase/subscribe-topic", handlers.Firebase.SubscribeTopic)
+	privateRouter.POST("/firebase/unsubscribe-topic", handlers.Firebase.UnsubscribeTopic)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})
