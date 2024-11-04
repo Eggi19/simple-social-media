@@ -33,6 +33,12 @@ func createRouter(con config.Config) *gin.Engine {
 		log.Fatalf("error connecting to DB: %s", err.Error())
 	}
 
+	//firebase
+	firebase, err := config.NewFirebaseRepository("./firebase-service-account-key.json")
+	if err != nil {
+		log.Fatalf("error creating firebase client: %s", err.Error())
+	}
+
 	//repository
 	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
 	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{Db: db})
@@ -49,6 +55,7 @@ func createRouter(con config.Config) *gin.Engine {
 	})
 	commentUsecase := usecases.NewCommentUsecaseImpl(&usecases.CommentUsecaseOpts{
 		CommentRepository: commentRepository,
+		FirebaseClient:    firebase.Client,
 	})
 
 	//handler

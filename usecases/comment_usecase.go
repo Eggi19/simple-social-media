@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 
+	"firebase.google.com/go/messaging"
 	"github.com/Eggi19/simple-social-media/dtos"
 	"github.com/Eggi19/simple-social-media/entities"
 	"github.com/Eggi19/simple-social-media/repositories"
@@ -10,6 +11,7 @@ import (
 
 type CommentUsecaseOpts struct {
 	CommentRepository repositories.CommentRepository
+	FirebaseClient    *messaging.Client
 }
 
 type CommentUsecase interface {
@@ -18,11 +20,13 @@ type CommentUsecase interface {
 
 type CommentUsecaseImpl struct {
 	CommentRepository repositories.CommentRepository
+	FirebaseClient    *messaging.Client
 }
 
 func NewCommentUsecaseImpl(tuOpts *CommentUsecaseOpts) CommentUsecase {
 	return &CommentUsecaseImpl{
 		CommentRepository: tuOpts.CommentRepository,
+		FirebaseClient:    tuOpts.FirebaseClient,
 	}
 }
 
