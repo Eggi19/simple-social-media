@@ -16,6 +16,8 @@ type UserRepoOpt struct {
 type UserRepository interface {
 	RegisterUser(ctx context.Context, req entities.User) error
 	GetUserByEmail(ctx context.Context, email string) (*entities.User, error)
+	GetUserIdByTweetId(ctx context.Context, tweetId int64) (*entities.User, error)
+	GetUserById(ctx context.Context, userId int64) (*entities.User, error)
 }
 
 type UserRepositoryPostgres struct {
@@ -61,6 +63,50 @@ func (r *UserRepositoryPostgres) GetUserByEmail(ctx context.Context, email strin
 		err = tx.QueryRowContext(ctx, queries.GetUserByEmail, email).Scan(&u.Id, &u.Name, &u.Email, &u.Password)
 	} else {
 		err = r.db.QueryRowContext(ctx, queries.GetUserByEmail, email).Scan(&u.Id, &u.Name, &u.Email, &u.Password)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, custom_errors.NotFound()
+		}
+		return nil, err
+	}
+
+	return &u, nil
+}
+
+func (r *UserRepositoryPostgres) GetUserIdByTweetId(ctx context.Context, tweetId int64) (*entities.User, error) {
+	u := entities.User{}
+
+	var err error
+
+	tx := extractTx(ctx)
+	if tx != nil {
+		err = tx.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id)
+	} else {
+		err = r.db.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, custom_errors.NotFound()
+		}
+		return nil, err
+	}
+
+	return &u, nil
+}
+
+func (r *UserRepositoryPostgres) GetUserById(ctx context.Context, userId int64) (*entities.User, error) {
+	u := entities.User{}
+
+	var err error
+
+	tx := extractTx(ctx)
+	if tx != nil {
+		err = tx.QueryRowContext(ctx, queries.GetUserById, userId).Scan(&u.Id, &u.Name, &u.Email, &u.Password)
+	} else {
+		err = r.db.QueryRowContext(ctx, queries.GetUserById, userId).Scan(&u.Id, &u.Name, &u.Email, &u.Password)
 	}
 
 	if err != nil {
