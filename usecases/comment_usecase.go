@@ -52,25 +52,20 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 		if err != nil {
 			return nil, err
 		}
-	
-		userData, err := u.UserRepository.GetUserById(ctx, user.Id)
-		if err != nil {
-			return nil, err
-		}
 
-		return userData, nil
+		return user, nil
 	})
 	if err != nil {
 		return err
 	}
 
-	userData := data.(*entities.User)
+	user := data.(*entities.User)
 
 	// set message payload.
 	message := &messaging.Message{
-		Token: userData.FcmToken,
+		Token: user.FcmToken,
 		Notification: &messaging.Notification{
-			Title: fmt.Sprintf(`%s likes your tweet`, userData.Name),
+			Title: fmt.Sprintf(`%s likes your tweet`, user.Name),
 		},
 	}
 

@@ -83,9 +83,9 @@ func (r *UserRepositoryPostgres) GetUserIdByTweetId(ctx context.Context, tweetId
 
 	tx := extractTx(ctx)
 	if tx != nil {
-		err = tx.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id)
+		err = tx.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id, &u.Name, &u.Email, &u.Password, &u.FcmToken)
 	} else {
-		err = r.db.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id)
+		err = r.db.QueryRowContext(ctx, queries.GetUserIdByTweetId, tweetId).Scan(&u.Id, &u.Name, &u.Email, &u.Password, &u.FcmToken)
 	}
 
 	if err != nil {
