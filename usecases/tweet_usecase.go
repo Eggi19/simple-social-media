@@ -58,12 +58,12 @@ func (u *TweetUsecaseImpl) LikeTweet(ctx context.Context, tweetId int64) error {
 		likes = tweet.Likes + 1
 	}
 
-	err = u.TweetRepository.UpdateTweetLikes(ctx, tweetId, likes)
+	user, err := u.UserRepository.GetUserIdByTweetId(ctx, tweetId)
 	if err != nil {
 		return err
 	}
 
-	user, err := u.UserRepository.GetUserIdByTweetId(ctx, tweetId)
+	err = u.TweetRepository.UpdateTweetLikes(ctx, tweetId, likes)
 	if err != nil {
 		return err
 	}
