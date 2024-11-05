@@ -17,30 +17,84 @@ import (
 	"github.com/Eggi19/simple-social-media/middlewares"
 	"github.com/Eggi19/simple-social-media/repositories"
 	"github.com/Eggi19/simple-social-media/usecases"
+	"github.com/Eggi19/simple-social-media/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type RouterOpts struct {
-	User *handlers.UserHandler
+	User     *handlers.UserHandler
+	Tweet    *handlers.TweetHandler
+	Comment  *handlers.CommentHandler
+	Firebase *handlers.FirebaseHandler
 }
 
 func createRouter(con config.Config) *gin.Engine {
+	// init config
 	db, err := config.ConnectDB(con)
 	if err != nil {
 		log.Fatalf("error connecting to DB: %s", err.Error())
 	}
 
+	firebase, err := config.NewFirebaseRepository(con, "./firebase-service-account-key.json")
+	if err != nil {
+		log.Fatalf("error creating firebase client: %s", err.Error())
+	}
+
+	transaction := repositories.NewTransactor(db)
+
 	//repository
-	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
+	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{
+		Db: db,
+	})
+	tweetRepository := repositories.NewTweetRepositoryDb(&repositories.TweetRepoOpt{
+		Db:              db,
+		FirebseDbClient: firebase.DbClient,
+	})
+	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{
+		Db: db,
+	})
+	firebaseRepository := repositories.NewFirebaseRepositoryPostgres(&repositories.FirebaseRepoOpt{
+		FirebaseMessagingClient: firebase.MessagingClient,
+	})
 
 	//usecase
-	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{UserRepository: userRepository})
+	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
+		HashAlgorithm:     utils.NewBCryptHasher(),
+		AuthTokenProvider: utils.NewJwtProvider(con),
+		UserRepository:    userRepository,
+	})
+	tweetUsecase := usecases.NewTweetUsecaseImpl(&usecases.TweetUsecaseOpts{
+		TweetRepository: tweetRepository,
+	})
+	commentUsecase := usecases.NewCommentUsecaseImpl(&usecases.CommentUsecaseOpts{
+		CommentRepository:       commentRepository,
+		UserRepository:          userRepository,
+		Transactor:              transaction,
+		FirebaseMessagingClient: firebase.MessagingClient,
+	})
+	firebaseUsecase := usecases.NewFirebaseUsecaseImpl(&usecases.FirebaseUsecaseOpts{
+		FirebaseRepository: firebaseRepository,
+	})
 
 	//handler
-	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{UserUsecase: userUsecase})
+	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{
+		UserUsecase: userUsecase,
+	})
+	tweetHandler := handlers.NewTweetHandler(&handlers.TweetHandlerOpts{
+		TweetUsecase: tweetUsecase,
+	})
+	commentHandler := handlers.NewCommentHandler(&handlers.CommentHandlerOpts{
+		CommentUsecase: commentUsecase,
+	})
+	firebaseHandler := handlers.NewFirebaseHandler(&handlers.FirebaseHandlerOpts{
+		FirebaseUsecase: firebaseUsecase,
+	})
 
 	return NewRouter(con, &RouterOpts{
-		User: userHandler,
+		User:     userHandler,
+		Tweet:    tweetHandler,
+		Comment:  commentHandler,
+		Firebase: firebaseHandler,
 	})
 }
 
@@ -88,11 +142,18 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	router.Use(middlewares.ErrorHandling)
 
 	// public routers
-	// publicRouter := router.Group("/")
+	publicRouter := router.Group("/")
+	publicRouter.POST("/register", handlers.User.RegisterUser)
+	publicRouter.POST("/login", handlers.User.LoginUser)
 
 	// private routers
 	privateRouter := router.Group(("/"))
 	privateRouter.Use(middlewares.JwtAuthMiddleware(config))
+	privateRouter.POST("/tweet", handlers.Tweet.CreateTweet)
+	privateRouter.POST("/comment", handlers.Comment.CreateComment)
+	privateRouter.POST("/firebase/subscribe-topic", handlers.Firebase.SubscribeTopic)
+	privateRouter.POST("/firebase/unsubscribe-topic", handlers.Firebase.UnsubscribeTopic)
+	privateRouter.POST("/tweet/like", handlers.Tweet.LikeTweet)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})

@@ -10,6 +10,9 @@ import (
 
 var (
 	ErrInvalidAuthToken = errors.New(constants.InvalidAuthTokenErrMsg)
+	ErrNotFound         = errors.New(constants.NotFoundErrorMsg)
+	ErrContextNotFound  = errors.New(constants.ContextNotFoundErrMsg)
+	ErrForbidden        = errors.New(constants.ForbiddenErrMsg)
 )
 
 type AppError struct {
@@ -44,5 +47,38 @@ func InvalidAuthToken() *AppError {
 		Code:    http.StatusUnauthorized,
 		Message: constants.InvalidAuthTokenErrMsg,
 		err:     ErrInvalidAuthToken,
+	}
+}
+
+func NotFound() *AppError {
+	return &AppError{
+		Code:    http.StatusNotFound,
+		Message: constants.NotFoundErrorMsg,
+		err:     ErrNotFound,
+	}
+}
+
+func Unauthorized(err error, message string, status int) *AppError {
+	return &AppError{
+		Status:  status,
+		Code:    http.StatusUnauthorized,
+		Message: message,
+		err:     err,
+	}
+}
+
+func ContextNotFound() *AppError {
+	return &AppError{
+		Code:    http.StatusNotFound,
+		Message: constants.ContextNotFoundErrMsg,
+		err:     ErrContextNotFound,
+	}
+}
+
+func Forbidden() *AppError {
+	return &AppError{
+		Code:    http.StatusForbidden,
+		Message: constants.ForbiddenErrMsg,
+		err:     ErrForbidden,
 	}
 }
