@@ -7,6 +7,7 @@ create table users (
     email VARCHAR NOT NULL,
     password VARCHAR NOT NULL,
     photo_profile VARCHAR,
+    fcm_token VARCHAR,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP

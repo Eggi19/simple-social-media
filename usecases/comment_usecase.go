@@ -3,7 +3,6 @@ package usecases
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"firebase.google.com/go/messaging"
 	"github.com/Eggi19/simple-social-media/dtos"
@@ -69,10 +68,10 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 
 	// set message payload.
 	message := &messaging.Message{
+		Token: userData.FcmToken,
 		Notification: &messaging.Notification{
 			Title: fmt.Sprintf(`%s likes your tweet`, userData.Name),
 		},
-		Topic: strconv.Itoa(int(userData.Id)), // should subscribe with user id as the topic to receive personal notif
 	}
 
 	_, err = u.FirebaseClient.Send(ctx, message)

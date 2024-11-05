@@ -10,6 +10,7 @@ type User struct {
 	Name         string
 	Email        string
 	Password     string
+	FcmToken     string
 	PhotoProfile sql.NullString
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

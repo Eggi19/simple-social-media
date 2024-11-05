@@ -7,7 +7,7 @@ const (
 	`
 
 	GetUserByEmail = `
-		SELECT id, name, email, password
+		SELECT id, name, email, password, fcm_token
 		FROM users
 		WHERE email = $1 AND deleted_at IS NULL;
 	`
@@ -20,8 +20,14 @@ const (
 	`
 
 	GetUserById = `
-		SELECT id, name, email, password
+		SELECT id, name, email, password, fcm_token
 		FROM users
 		WHERE id = $1 AND deleted_at IS NULL;
+	`
+
+	UpdateFcmToken = `
+		UPDATE users SET
+		fcm_token = $1
+		WHERE id = $2 AND deleted_at IS NULL;
 	`
 )

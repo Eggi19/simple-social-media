@@ -9,29 +9,37 @@ import (
 
 type FirebaseUsecaseOpts struct {
 	FirebaseRepository repositories.FirebaseRepository
+	UserRepository     repositories.UserRepository
 }
 
 type FirebaseUsecase interface {
-	SubscribeTopic(ctx context.Context, req dtos.SubscribeTopicRequest) error
+	SubscribeTopic(ctx context.Context, userId int64, req dtos.SubscribeTopicRequest) error
 	UnsubscribeTopic(ctx context.Context, req dtos.UnsubscribeTopicRequest) error
 }
 
 type FirebaseUsecaseImpl struct {
 	FirebaseRepository repositories.FirebaseRepository
+	UserRepository     repositories.UserRepository
 }
 
 func NewFirebaseUsecaseImpl(fuOpts *FirebaseUsecaseOpts) FirebaseUsecase {
 	return &FirebaseUsecaseImpl{
 		FirebaseRepository: fuOpts.FirebaseRepository,
+		UserRepository:     fuOpts.UserRepository,
 	}
 }
 
-func (u *FirebaseUsecaseImpl) SubscribeTopic(ctx context.Context, req dtos.SubscribeTopicRequest) error {
+func (u *FirebaseUsecaseImpl) SubscribeTopic(ctx context.Context, userId int64, req dtos.SubscribeTopicRequest) error {
 	fcmTokens := []string{
 		req.FcmToken,
 	}
 
-	err := u.FirebaseRepository.SubsribeTopic(ctx, fcmTokens, req.Topic)
+	err := u.UserRepository.UpdateFcmToken(ctx, req.FcmToken, userId)
+	if err != nil {
+		return err
+	}
+
+	err = u.FirebaseRepository.SubsribeTopic(ctx, fcmTokens, req.Topic)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/Eggi19/simple-social-media/constants"
 	"github.com/Eggi19/simple-social-media/dtos"
 	"github.com/Eggi19/simple-social-media/usecases"
+	"github.com/Eggi19/simple-social-media/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +31,13 @@ func (h *FirebaseHandler) SubscribeTopic(ctx *gin.Context) {
 		return
 	}
 	
-    err := h.FirebaseUsecase.SubscribeTopic(ctx, payload)
+	id, err := utils.GetIdParamOrContext(ctx, "id")
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+    err = h.FirebaseUsecase.SubscribeTopic(ctx, int64(id), payload)
 	if err != nil {
 		ctx.Error(err)
 		return
