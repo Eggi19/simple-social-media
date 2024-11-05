@@ -43,10 +43,18 @@ func createRouter(con config.Config) *gin.Engine {
 	transaction := repositories.NewTransactor(db)
 
 	//repository
-	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{Db: db})
-	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{Db: db})
-	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{Db: db})
-	firebaseRepository := repositories.NewFirebaseRepositoryPostgres(&repositories.FirebaseRepoOpt{FirebaseClient: firebase.Client})
+	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{
+		Db: db,
+	})
+	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{
+		Db: db,
+	})
+	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{
+		Db: db,
+	})
+	firebaseRepository := repositories.NewFirebaseRepositoryPostgres(&repositories.FirebaseRepoOpt{
+		FirebaseMessagingClient: firebase.MessagingClient,
+	})
 
 	//usecase
 	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
@@ -58,20 +66,28 @@ func createRouter(con config.Config) *gin.Engine {
 		TweetRepository: tweetRepository,
 	})
 	commentUsecase := usecases.NewCommentUsecaseImpl(&usecases.CommentUsecaseOpts{
-		CommentRepository: commentRepository,
-		UserRepository:    userRepository,
-		Transactor:        transaction,
-		FirebaseClient:    firebase.Client,
+		CommentRepository:       commentRepository,
+		UserRepository:          userRepository,
+		Transactor:              transaction,
+		FirebaseMessagingClient: firebase.MessagingClient,
 	})
 	firebaseUsecase := usecases.NewFirebaseUsecaseImpl(&usecases.FirebaseUsecaseOpts{
 		FirebaseRepository: firebaseRepository,
 	})
 
 	//handler
-	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{UserUsecase: userUsecase})
-	tweetHandler := handlers.NewTweetHandler(&handlers.TweetHandlerOpts{TweetUsecase: tweetUsecase})
-	commentHandler := handlers.NewCommentHandler(&handlers.CommentHandlerOpts{CommentUsecase: commentUsecase})
-	firebaseHandler := handlers.NewFirebaseHandler(&handlers.FirebaseHandlerOpts{FirebaseUsecase: firebaseUsecase})
+	userHandler := handlers.NewUserHandler(&handlers.UserHandlerOpts{
+		UserUsecase: userUsecase,
+	})
+	tweetHandler := handlers.NewTweetHandler(&handlers.TweetHandlerOpts{
+		TweetUsecase: tweetUsecase,
+	})
+	commentHandler := handlers.NewCommentHandler(&handlers.CommentHandlerOpts{
+		CommentUsecase: commentUsecase,
+	})
+	firebaseHandler := handlers.NewFirebaseHandler(&handlers.FirebaseHandlerOpts{
+		FirebaseUsecase: firebaseUsecase,
+	})
 
 	return NewRouter(con, &RouterOpts{
 		User:     userHandler,

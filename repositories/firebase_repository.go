@@ -3,30 +3,35 @@ package repositories
 import (
 	"context"
 
+	"firebase.google.com/go/db"
 	"firebase.google.com/go/messaging"
 )
 
 type FirebaseRepoOpt struct {
-	FirebaseClient *messaging.Client
+	FirebaseMessagingClient *messaging.Client
+	FirebaseDbClient        *db.Client
 }
 
 type FirebaseRepository interface {
 	SubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error
 	UnsubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error
+	WriteData(ctx context.Context, ref string, data map[string]interface{}) error
 }
 
-type FirebaseClientRepository struct {
-	FirebaseClient *messaging.Client
+type FirebaseMessagingClientRepository struct {
+	FirebaseMessagingClient *messaging.Client
+	FirebaseDbClient        *db.Client
 }
 
 func NewFirebaseRepositoryPostgres(frOpt *FirebaseRepoOpt) FirebaseRepository {
-	return &FirebaseClientRepository{
-		FirebaseClient: frOpt.FirebaseClient,
+	return &FirebaseMessagingClientRepository{
+		FirebaseMessagingClient: frOpt.FirebaseMessagingClient,
+		FirebaseDbClient:        frOpt.FirebaseDbClient,
 	}
 }
 
-func (r *FirebaseClientRepository) SubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error {
-	_, err := r.FirebaseClient.SubscribeToTopic(ctx, fcmTokens, topic)
+func (r *FirebaseMessagingClientRepository) SubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error {
+	_, err := r.FirebaseMessagingClient.SubscribeToTopic(ctx, fcmTokens, topic)
 	if err != nil {
 		return err
 	}
@@ -34,11 +39,22 @@ func (r *FirebaseClientRepository) SubsribeTopic(ctx context.Context, fcmTokens 
 	return nil
 }
 
-func (r *FirebaseClientRepository) UnsubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error {
-	_, err := r.FirebaseClient.UnsubscribeFromTopic(ctx, fcmTokens, topic)
+func (r *FirebaseMessagingClientRepository) UnsubsribeTopic(ctx context.Context, fcmTokens []string, topic string) error {
+	_, err := r.FirebaseMessagingClient.UnsubscribeFromTopic(ctx, fcmTokens, topic)
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (r *FirebaseMessagingClientRepository) WriteData(ctx context.Context, ref string, data map[string]interface{}) error {
+	reference := r.FirebaseDbClient.NewRef(ref)
+
+	err := reference.Set(ctx, data); 
+	if err != nil {
+        return err
+    }
 
 	return nil
 }

@@ -11,10 +11,10 @@ import (
 )
 
 type CommentUsecaseOpts struct {
-	CommentRepository repositories.CommentRepository
-	UserRepository    repositories.UserRepository
-	Transactor        repositories.Transactor
-	FirebaseClient    *messaging.Client
+	CommentRepository       repositories.CommentRepository
+	UserRepository          repositories.UserRepository
+	Transactor              repositories.Transactor
+	FirebaseMessagingClient *messaging.Client
 }
 
 type CommentUsecase interface {
@@ -22,18 +22,18 @@ type CommentUsecase interface {
 }
 
 type CommentUsecaseImpl struct {
-	CommentRepository repositories.CommentRepository
-	UserRepository    repositories.UserRepository
-	Transactor        repositories.Transactor
-	FirebaseClient    *messaging.Client
+	CommentRepository       repositories.CommentRepository
+	UserRepository          repositories.UserRepository
+	Transactor              repositories.Transactor
+	FirebaseMessagingClient *messaging.Client
 }
 
 func NewCommentUsecaseImpl(tuOpts *CommentUsecaseOpts) CommentUsecase {
 	return &CommentUsecaseImpl{
-		CommentRepository: tuOpts.CommentRepository,
-		UserRepository:    tuOpts.UserRepository,
-		Transactor:        tuOpts.Transactor,
-		FirebaseClient:    tuOpts.FirebaseClient,
+		CommentRepository:       tuOpts.CommentRepository,
+		UserRepository:          tuOpts.UserRepository,
+		Transactor:              tuOpts.Transactor,
+		FirebaseMessagingClient: tuOpts.FirebaseMessagingClient,
 	}
 }
 
@@ -47,7 +47,7 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 		if err != nil {
 			return nil, err
 		}
-	
+
 		user, err := u.UserRepository.GetUserIdByTweetId(ctx, req.TweetId)
 		if err != nil {
 			return nil, err
@@ -69,7 +69,7 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 		},
 	}
 
-	_, err = u.FirebaseClient.Send(ctx, message)
+	_, err = u.FirebaseMessagingClient.Send(ctx, message)
 	if err != nil {
 		return err
 	}
