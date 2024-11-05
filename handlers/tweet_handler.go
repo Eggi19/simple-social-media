@@ -49,3 +49,23 @@ func (h *TweetHandler) CreateTweet(ctx *gin.Context) {
 		Data:    nil,
 	})
 }
+
+func (h *TweetHandler) LikeTweet(ctx *gin.Context) {
+	var payload dtos.TweetLikesRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+    err := h.TweetUsecase.LikeTweet(ctx, payload.TweetId)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dtos.ResponseMessage{
+		Status:  0,
+		Message: constants.ResponseMsgLikeTweet,
+		Data:    nil,
+	})
+}

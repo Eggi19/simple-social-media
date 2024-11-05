@@ -14,6 +14,7 @@ type TweetUsecaseOpts struct {
 
 type TweetUsecase interface {
 	CreateTweet(ctx context.Context, userId int64, req dtos.CreateTweetRequest) error
+	LikeTweet(ctx context.Context, tweetId int64) error
 }
 
 type TweetUsecaseImpl struct {
@@ -31,6 +32,26 @@ func (u *TweetUsecaseImpl) CreateTweet(ctx context.Context, userId int64, req dt
 		Tweet: req.Tweet,
 		UserId: userId,
 	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *TweetUsecaseImpl) LikeTweet(ctx context.Context, tweetId int64) error {
+	var likes int64 = 1
+	tweet, err := u.TweetRepository.GetTweetLikes(ctx, tweetId)
+	if err != nil {
+		return err
+	}
+
+	if tweet != nil {
+		likes = tweet.Likes + 1
+	}
+
+
+	err = u.TweetRepository.UpdateTweetLikes(ctx, tweetId, likes)
 	if err != nil {
 		return err
 	}

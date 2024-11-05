@@ -2,10 +2,11 @@ package config
 
 import (
 	"context"
+	"fmt"
 
-	"firebase.google.com/go"
-	"firebase.google.com/go/db"
-	"firebase.google.com/go/messaging"
+	"firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/db"
+	"firebase.google.com/go/v4/messaging"
 	"google.golang.org/api/option"
 )
 
@@ -14,11 +15,16 @@ type FirebaseClient struct {
 	DbClient        *db.Client
 }
 
-func NewFirebaseRepository(serviceAccountKeyPath string) (*FirebaseClient, error) {
+func NewFirebaseRepository(config Config, serviceAccountKeyPath string) (*FirebaseClient, error) {
 	ctx := context.Background()
+	firebaseConfig := &firebase.Config{
+        DatabaseURL: config.FirebaseDbUrl,
+        ProjectID: config.FirebaseProjectId,
+        StorageBucket: config.FirebaseStorageBucket,
+    }
 
 	// Initialize Firebase App
-	app, err := firebase.NewApp(ctx, nil, option.WithCredentialsFile(serviceAccountKeyPath))
+	app, err := firebase.NewApp(ctx, firebaseConfig, option.WithCredentialsFile(serviceAccountKeyPath))
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +35,11 @@ func NewFirebaseRepository(serviceAccountKeyPath string) (*FirebaseClient, error
 		return nil, err
 	}
 
+    
+
 	dbClient, err := app.Database(ctx)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 

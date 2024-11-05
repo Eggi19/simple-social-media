@@ -35,7 +35,7 @@ func createRouter(con config.Config) *gin.Engine {
 		log.Fatalf("error connecting to DB: %s", err.Error())
 	}
 
-	firebase, err := config.NewFirebaseRepository("./firebase-service-account-key.json")
+	firebase, err := config.NewFirebaseRepository(con, "./firebase-service-account-key.json")
 	if err != nil {
 		log.Fatalf("error creating firebase client: %s", err.Error())
 	}
@@ -46,8 +46,9 @@ func createRouter(con config.Config) *gin.Engine {
 	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{
 		Db: db,
 	})
-	tweetRepository := repositories.NewTweetRepositoryPostgres(&repositories.TweetRepoOpt{
-		Db: db,
+	tweetRepository := repositories.NewTweetRepositoryDb(&repositories.TweetRepoOpt{
+		Db:              db,
+		FirebseDbClient: firebase.DbClient,
 	})
 	commentRepository := repositories.NewCommentRepositoryPostgres(&repositories.CommentRepoOpt{
 		Db: db,
@@ -152,6 +153,7 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	privateRouter.POST("/comment", handlers.Comment.CreateComment)
 	privateRouter.POST("/firebase/subscribe-topic", handlers.Firebase.SubscribeTopic)
 	privateRouter.POST("/firebase/unsubscribe-topic", handlers.Firebase.UnsubscribeTopic)
+	privateRouter.POST("/tweet/like", handlers.Tweet.LikeTweet)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})

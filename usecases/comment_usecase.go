@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"firebase.google.com/go/messaging"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/Eggi19/simple-social-media/dtos"
 	"github.com/Eggi19/simple-social-media/entities"
 	"github.com/Eggi19/simple-social-media/repositories"
@@ -63,7 +63,7 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 
 	// set message payload.
 	message := &messaging.Message{
-		Token: user.FcmToken,
+		Token: user.FcmToken.String,
 		Notification: &messaging.Notification{
 			Title: fmt.Sprintf(`%s likes your tweet`, user.Name),
 		},
