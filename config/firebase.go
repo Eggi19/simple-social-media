@@ -35,8 +35,6 @@ func NewFirebaseRepository(config Config, serviceAccountKeyPath string) (*Fireba
 		return nil, err
 	}
 
-    
-
 	dbClient, err := app.Database(ctx)
 	if err != nil {
 		fmt.Println(err)
