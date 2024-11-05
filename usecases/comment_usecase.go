@@ -65,7 +65,7 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 	message := &messaging.Message{
 		Token: user.FcmToken.String,
 		Notification: &messaging.Notification{
-			Title: fmt.Sprintf(`%s likes your tweet`, user.Name),
+			Title: fmt.Sprintf(`%s comment your tweet`, user.Name),
 		},
 	}
 
