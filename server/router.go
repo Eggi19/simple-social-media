@@ -158,6 +158,7 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	privateRouter.POST("/firebase/unsubscribe-topic", handlers.Firebase.UnsubscribeTopic)
 	privateRouter.POST("/tweet/like", handlers.Tweet.LikeTweet)
 	privateRouter.POST("/follow", handlers.User.FollowUser)
+	privateRouter.POST("/unfollow", handlers.User.UnfollowUser)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})

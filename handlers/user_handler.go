@@ -89,3 +89,29 @@ func (h *UserHandler) FollowUser(ctx *gin.Context) {
 		Data:    nil,
 	})
 }
+
+func (h *UserHandler) UnfollowUser(ctx *gin.Context) {
+	var payload dtos.AddFollowerRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	id, err := utils.GetIdParamOrContext(ctx, "id")
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	err = h.UserUsecase.DeleteFollower(ctx, int64(id), payload)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dtos.ResponseMessage{
+		Status:  0,
+		Message: constants.ResponseMsgUnfollowUser,
+		Data:    nil,
+	})
+}

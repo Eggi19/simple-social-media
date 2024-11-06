@@ -12,4 +12,5 @@ const (
 	InvalidIntegerInputErrMsg      = "invalid integer input"
 	ForbiddenErrMsg                = "this action is forbidden"
 	AlreadyFollowedErrMsg          = "already followed user"
+	NotFollowedErrMsg              = "user is not followed yet"
 )

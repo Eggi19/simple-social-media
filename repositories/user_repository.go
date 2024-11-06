@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -25,6 +26,7 @@ type UserRepository interface {
 	UpdateFcmToken(ctx context.Context, fcmToken string, userId int64) error
 	AddUserToFirestore(ctx context.Context, user entities.User) error
 	AddFollowerToFirestore(ctx context.Context, userId string, followerId string) error
+	DeleteFollowerToFirestore(ctx context.Context, userId string, followerId string) error
 }
 
 type UserRepositoryDb struct {
@@ -143,9 +145,9 @@ func (r *UserRepositoryDb) UpdateFcmToken(ctx context.Context, fcmToken string, 
 func (r *UserRepositoryDb) AddUserToFirestore(ctx context.Context, user entities.User) error {
 	userIdStr := strconv.Itoa(int(user.Id))
 	_, err := r.FirestoreClient.Collection("users").Doc(userIdStr).Set(ctx, entities.UserFirestore{
-		Name: user.Name,
-		Email: user.Email,
-		FollowerCount: 0,
+		Name:           user.Name,
+		Email:          user.Email,
+		FollowerCount:  0,
 		FollowingCount: 0,
 	})
 
@@ -161,7 +163,7 @@ func (r *UserRepositoryDb) AddFollowerToFirestore(ctx context.Context, userId st
 	followerRef := r.FirestoreClient.Collection("users").Doc(followerId)
 	usersFollowersRef := r.FirestoreClient.Collection("users").Doc(userId).Collection("followers").Doc(followerId)
 	followersFollowingRef := r.FirestoreClient.Collection("users").Doc(followerId).Collection("following").Doc(userId)
-	
+
 	doc, err := usersFollowersRef.Get(ctx)
 	if err != nil {
 		return err
@@ -181,7 +183,7 @@ func (r *UserRepositoryDb) AddFollowerToFirestore(ctx context.Context, userId st
 
 		err = t.Set(followersFollowingRef, entities.FollowingFirestore{
 			FollowingId: userId,
-			FollowedAt: time.Now(),
+			FollowedAt:  time.Now(),
 		})
 		if err != nil {
 			return err
@@ -203,7 +205,56 @@ func (r *UserRepositoryDb) AddFollowerToFirestore(ctx context.Context, userId st
 
 		return nil
 	})
-	
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserRepositoryDb) DeleteFollowerToFirestore(ctx context.Context, userId string, followerId string) error {
+	userRef := r.FirestoreClient.Collection("users").Doc(userId)
+	followerRef := r.FirestoreClient.Collection("users").Doc(followerId)
+	usersFollowersRef := r.FirestoreClient.Collection("users").Doc(userId).Collection("followers").Doc(followerId)
+	followersFollowingRef := r.FirestoreClient.Collection("users").Doc(followerId).Collection("following").Doc(userId)
+
+	_, err := usersFollowersRef.Get(ctx)
+	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
+			return custom_errors.NotFollowed()
+		}
+		return err
+	}
+
+	err = r.FirestoreClient.RunTransaction(ctx, func(ctx context.Context, t *firestore.Transaction) error {
+		err := t.Delete(usersFollowersRef)
+		if err != nil {
+			return err
+		}
+
+		err = t.Delete(followersFollowingRef)
+		if err != nil {
+			return err
+		}
+
+		err = t.Update(userRef, []firestore.Update{
+			{Path: "FollowerCount", Value: firestore.Increment(-1)},
+		})
+		if err != nil {
+			return err
+		}
+
+		err = t.Update(followerRef, []firestore.Update{
+			{Path: "FollowingCount", Value: firestore.Increment(-1)},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}

@@ -61,17 +61,19 @@ func (u *CommentUsecaseImpl) CreateComment(ctx context.Context, userId int64, re
 
 	user := data.(*entities.User)
 
-	// set message payload.
-	message := &messaging.Message{
-		Token: user.FcmToken.String,
-		Notification: &messaging.Notification{
-			Title: fmt.Sprintf(`%s comment your tweet`, user.Name),
-		},
-	}
+	if user.FcmToken.Valid {
+		// set message payload.
+		message := &messaging.Message{
+			Token: user.FcmToken.String,
+			Notification: &messaging.Notification{
+				Title: fmt.Sprintf(`%s comment your tweet`, user.Name),
+			},
+		}
 
-	_, err = u.FirebaseMessagingClient.Send(ctx, message)
-	if err != nil {
-		return err
+		_, err = u.FirebaseMessagingClient.Send(ctx, message)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

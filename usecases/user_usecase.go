@@ -25,6 +25,7 @@ type UserUsecase interface {
 	RegisterUser(ctx context.Context, req dtos.UserRegisterData) error
 	Login(ctx context.Context, req dtos.UserLoginRequest) (*utils.JwtToken, error)
 	AddFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error
+	DeleteFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error
 }
 
 type UserUsecaseImpl struct {
@@ -133,6 +134,18 @@ func (u *UserUsecaseImpl) AddFollower(ctx context.Context, userId int64, req dto
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (u *UserUsecaseImpl) DeleteFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error {
+	followingId := strconv.Itoa(int(req.FollowingId))
+	followerId := strconv.Itoa(int(userId))
+
+	err := u.UserRepository.DeleteFollowerToFirestore(ctx, followingId, followerId)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -14,6 +14,7 @@ var (
 	ErrContextNotFound  = errors.New(constants.ContextNotFoundErrMsg)
 	ErrForbidden        = errors.New(constants.ForbiddenErrMsg)
 	ErrAlreadyFollowed  = errors.New(constants.AlreadyFollowedErrMsg)
+	ErrNotFollowed      = errors.New(constants.NotFollowedErrMsg)
 )
 
 type AppError struct {
@@ -89,5 +90,13 @@ func AlreadyFollowed() *AppError {
 		Code:    http.StatusBadRequest,
 		Message: constants.AlreadyFollowedErrMsg,
 		err:     ErrAlreadyFollowed,
+	}
+}
+
+func NotFollowed() *AppError {
+	return &AppError{
+		Code:    http.StatusBadRequest,
+		Message: constants.NotFollowedErrMsg,
+		err:     ErrNotFollowed,
 	}
 }
