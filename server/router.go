@@ -43,8 +43,9 @@ func createRouter(con config.Config) *gin.Engine {
 	transaction := repositories.NewTransactor(db)
 
 	//repository
-	userRepository := repositories.NewUserRepositoryPostgres(&repositories.UserRepoOpt{
-		Db: db,
+	userRepository := repositories.NewUserRepositoryDb(&repositories.UserRepoOpt{
+		Db:              db,
+		FirestoreClient: firebase.FirestoreClient,
 	})
 	tweetRepository := repositories.NewTweetRepositoryDb(&repositories.TweetRepoOpt{
 		Db:              db,
@@ -59,9 +60,11 @@ func createRouter(con config.Config) *gin.Engine {
 
 	//usecase
 	userUsecase := usecases.NewUserUsecaseImpl(&usecases.UserUsecaseOpts{
-		HashAlgorithm:     utils.NewBCryptHasher(),
-		AuthTokenProvider: utils.NewJwtProvider(con),
-		UserRepository:    userRepository,
+		HashAlgorithm:           utils.NewBCryptHasher(),
+		AuthTokenProvider:       utils.NewJwtProvider(con),
+		FirebaseMessagingClient: firebase.MessagingClient,
+		Transactor:              transaction,
+		UserRepository:          userRepository,
 	})
 	tweetUsecase := usecases.NewTweetUsecaseImpl(&usecases.TweetUsecaseOpts{
 		TweetRepository: tweetRepository,
@@ -154,6 +157,8 @@ func NewRouter(config config.Config, handlers *RouterOpts) *gin.Engine {
 	privateRouter.POST("/firebase/subscribe-topic", handlers.Firebase.SubscribeTopic)
 	privateRouter.POST("/firebase/unsubscribe-topic", handlers.Firebase.UnsubscribeTopic)
 	privateRouter.POST("/tweet/like", handlers.Tweet.LikeTweet)
+	privateRouter.POST("/follow", handlers.User.FollowUser)
+	privateRouter.POST("/unfollow", handlers.User.UnfollowUser)
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, dtos.ErrResponse{Message: constants.EndpointNotFoundErrMsg})

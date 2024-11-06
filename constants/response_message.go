@@ -8,4 +8,6 @@ const (
 	ResponseMsgSubscribeTopic   = "Subscribe topic success"
 	ResponseMsgUnsubscribeTopic = "Unsubscribe topic success"
 	ResponseMsgLikeTweet        = "Like tweet success"
+	ResponseMsgFollowUser       = "Follow user success"
+	ResponseMsgUnfollowUser     = "Unfollow user success"
 )

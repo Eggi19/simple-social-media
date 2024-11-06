@@ -11,4 +11,6 @@ const (
 	ContextNotFoundErrMsg          = "context not found"
 	InvalidIntegerInputErrMsg      = "invalid integer input"
 	ForbiddenErrMsg                = "this action is forbidden"
+	AlreadyFollowedErrMsg          = "already followed user"
+	NotFollowedErrMsg              = "user is not followed yet"
 )

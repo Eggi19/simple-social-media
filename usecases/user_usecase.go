@@ -2,7 +2,10 @@ package usecases
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
+	"firebase.google.com/go/v4/messaging"
 	"github.com/Eggi19/simple-social-media/constants"
 	"github.com/Eggi19/simple-social-media/custom_errors"
 	"github.com/Eggi19/simple-social-media/dtos"
@@ -11,27 +14,35 @@ import (
 )
 
 type UserUsecaseOpts struct {
-	HashAlgorithm     utils.Hasher
-	AuthTokenProvider utils.AuthTokenProvider
-	UserRepository    repositories.UserRepository
+	HashAlgorithm           utils.Hasher
+	AuthTokenProvider       utils.AuthTokenProvider
+	FirebaseMessagingClient *messaging.Client
+	Transactor              repositories.Transactor
+	UserRepository          repositories.UserRepository
 }
 
 type UserUsecase interface {
 	RegisterUser(ctx context.Context, req dtos.UserRegisterData) error
 	Login(ctx context.Context, req dtos.UserLoginRequest) (*utils.JwtToken, error)
+	AddFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error
+	DeleteFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error
 }
 
 type UserUsecaseImpl struct {
-	HashAlgorithm     utils.Hasher
-	AuthTokenProvider utils.AuthTokenProvider
-	UserRepository    repositories.UserRepository
+	HashAlgorithm           utils.Hasher
+	AuthTokenProvider       utils.AuthTokenProvider
+	FirebaseMessagingClient *messaging.Client
+	Transactor              repositories.Transactor
+	UserRepository          repositories.UserRepository
 }
 
 func NewUserUsecaseImpl(uuOpts *UserUsecaseOpts) UserUsecase {
 	return &UserUsecaseImpl{
-		HashAlgorithm:     uuOpts.HashAlgorithm,
-		AuthTokenProvider: uuOpts.AuthTokenProvider,
-		UserRepository:    uuOpts.UserRepository,
+		HashAlgorithm:           uuOpts.HashAlgorithm,
+		AuthTokenProvider:       uuOpts.AuthTokenProvider,
+		FirebaseMessagingClient: uuOpts.FirebaseMessagingClient,
+		Transactor:              uuOpts.Transactor,
+		UserRepository:          uuOpts.UserRepository,
 	}
 }
 
@@ -46,7 +57,19 @@ func (u *UserUsecaseImpl) RegisterUser(ctx context.Context, req dtos.UserRegiste
 
 	user := dtos.ConvertUserRegisterData(&req)
 
-	err = u.UserRepository.RegisterUser(ctx, *user)
+	_, err = u.Transactor.WithinTransaction(ctx, func(ctx context.Context) (interface{}, error) {
+		newUser, err := u.UserRepository.RegisterUser(ctx, *user)
+		if err != nil {
+			return nil, err
+		}
+
+		err = u.UserRepository.AddUserToFirestore(ctx, *newUser)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
 	if err != nil {
 		return err
 	}
@@ -78,4 +101,52 @@ func (u *UserUsecaseImpl) Login(ctx context.Context, req dtos.UserLoginRequest) 
 	}
 
 	return tokens, nil
+}
+
+func (u *UserUsecaseImpl) AddFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error {
+	followingId := strconv.Itoa(int(req.FollowingId))
+	followerId := strconv.Itoa(int(userId))
+
+	err := u.UserRepository.AddFollowerToFirestore(ctx, followingId, followerId)
+	if err != nil {
+		return err
+	}
+
+	following, err := u.UserRepository.GetUserById(ctx, req.FollowingId)
+	if err != nil {
+		return err
+	}
+
+	follower, err := u.UserRepository.GetUserById(ctx, userId)
+	if err != nil {
+		return err
+	}
+
+	if following.FcmToken.Valid {
+		message := &messaging.Message{
+			Token: following.FcmToken.String,
+			Notification: &messaging.Notification{
+				Title: fmt.Sprintf(`%s followed you`, follower.Name),
+			},
+		}
+	
+		_, err = u.FirebaseMessagingClient.Send(ctx, message)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *UserUsecaseImpl) DeleteFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error {
+	followingId := strconv.Itoa(int(req.FollowingId))
+	followerId := strconv.Itoa(int(userId))
+
+	err := u.UserRepository.DeleteFollowerToFirestore(ctx, followingId, followerId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
