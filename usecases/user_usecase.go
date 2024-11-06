@@ -2,6 +2,8 @@ package usecases
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"firebase.google.com/go/v4/messaging"
 	"github.com/Eggi19/simple-social-media/constants"
@@ -22,6 +24,7 @@ type UserUsecaseOpts struct {
 type UserUsecase interface {
 	RegisterUser(ctx context.Context, req dtos.UserRegisterData) error
 	Login(ctx context.Context, req dtos.UserLoginRequest) (*utils.JwtToken, error)
+	AddFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error
 }
 
 type UserUsecaseImpl struct {
@@ -97,4 +100,40 @@ func (u *UserUsecaseImpl) Login(ctx context.Context, req dtos.UserLoginRequest) 
 	}
 
 	return tokens, nil
+}
+
+func (u *UserUsecaseImpl) AddFollower(ctx context.Context, userId int64, req dtos.AddFollowerRequest) error {
+	followingId := strconv.Itoa(int(req.FollowingId))
+	followerId := strconv.Itoa(int(userId))
+
+	err := u.UserRepository.AddFollowerToFirestore(ctx, followingId, followerId)
+	if err != nil {
+		return err
+	}
+
+	following, err := u.UserRepository.GetUserById(ctx, req.FollowingId)
+	if err != nil {
+		return err
+	}
+
+	follower, err := u.UserRepository.GetUserById(ctx, userId)
+	if err != nil {
+		return err
+	}
+
+	if following.FcmToken.Valid {
+		message := &messaging.Message{
+			Token: following.FcmToken.String,
+			Notification: &messaging.Notification{
+				Title: fmt.Sprintf(`%s followed you`, follower.Name),
+			},
+		}
+	
+		_, err = u.FirebaseMessagingClient.Send(ctx, message)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

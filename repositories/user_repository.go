@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strconv"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/Eggi19/simple-social-media/custom_errors"
@@ -23,6 +24,7 @@ type UserRepository interface {
 	GetUserById(ctx context.Context, userId int64) (*entities.User, error)
 	UpdateFcmToken(ctx context.Context, fcmToken string, userId int64) error
 	AddUserToFirestore(ctx context.Context, user entities.User) error
+	AddFollowerToFirestore(ctx context.Context, userId string, followerId string) error
 }
 
 type UserRepositoryDb struct {
@@ -147,6 +149,61 @@ func (r *UserRepositoryDb) AddUserToFirestore(ctx context.Context, user entities
 		FollowingCount: 0,
 	})
 
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserRepositoryDb) AddFollowerToFirestore(ctx context.Context, userId string, followerId string) error {
+	userRef := r.FirestoreClient.Collection("users").Doc(userId)
+	followerRef := r.FirestoreClient.Collection("users").Doc(followerId)
+	usersFollowersRef := r.FirestoreClient.Collection("users").Doc(userId).Collection("followers").Doc(followerId)
+	followersFollowingRef := r.FirestoreClient.Collection("users").Doc(followerId).Collection("following").Doc(userId)
+	
+	doc, err := usersFollowersRef.Get(ctx)
+	if err != nil {
+		return err
+	}
+	if doc.Exists() {
+		return custom_errors.AlreadyFollowed()
+	}
+
+	err = r.FirestoreClient.RunTransaction(ctx, func(ctx context.Context, t *firestore.Transaction) error {
+		err := t.Set(usersFollowersRef, entities.FollowerFirestore{
+			FollowerId: followerId,
+			FollowedAt: time.Now(),
+		})
+		if err != nil {
+			return err
+		}
+
+		err = t.Set(followersFollowingRef, entities.FollowingFirestore{
+			FollowingId: userId,
+			FollowedAt: time.Now(),
+		})
+		if err != nil {
+			return err
+		}
+
+		err = t.Update(userRef, []firestore.Update{
+			{Path: "FollowerCount", Value: firestore.Increment(1)},
+		})
+		if err != nil {
+			return err
+		}
+
+		err = t.Update(followerRef, []firestore.Update{
+			{Path: "FollowingCount", Value: firestore.Increment(1)},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	
 	if err != nil {
 		return err
 	}

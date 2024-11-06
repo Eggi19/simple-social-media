@@ -18,8 +18,18 @@ type User struct {
 }
 
 type UserFirestore struct {
-	Name           string `json:"name"`
-	Email          string `json:"email"`
-	FollowerCount  int64  `json:"follower_count"`
-	FollowingCount int64  `json:"followeing_count"`
+	Name           string
+	Email          string
+	FollowerCount  int64
+	FollowingCount int64
+}
+
+type FollowerFirestore struct {
+	FollowerId string
+	FollowedAt time.Time
+}
+
+type FollowingFirestore struct {
+	FollowingId string
+	FollowedAt  time.Time
 }

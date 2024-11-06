@@ -13,6 +13,10 @@ type UserLoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type AddFollowerRequest struct {
+	FollowingId int64 `json:"following_id" binding:"required"`
+}
+
 func ConvertUserRegisterData(userData *UserRegisterData) *entities.User {
 	return &entities.User{
 		Name:     userData.Name,

@@ -6,6 +6,7 @@ import (
 	"github.com/Eggi19/simple-social-media/constants"
 	"github.com/Eggi19/simple-social-media/dtos"
 	"github.com/Eggi19/simple-social-media/usecases"
+	"github.com/Eggi19/simple-social-media/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -60,5 +61,31 @@ func (h *UserHandler) LoginUser(ctx *gin.Context) {
 		Status:  0,
 		Message: constants.ResponseMsgOK,
 		Data:    token,
+	})
+}
+
+func (h *UserHandler) FollowUser(ctx *gin.Context) {
+	var payload dtos.AddFollowerRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	id, err := utils.GetIdParamOrContext(ctx, "id")
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	err = h.UserUsecase.AddFollower(ctx, int64(id), payload)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dtos.ResponseMessage{
+		Status:  0,
+		Message: constants.ResponseMsgFollowUser,
+		Data:    nil,
 	})
 }
