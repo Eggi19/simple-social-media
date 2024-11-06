@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 
+	"firebase.google.com/go/v4/messaging"
 	"github.com/Eggi19/simple-social-media/constants"
 	"github.com/Eggi19/simple-social-media/custom_errors"
 	"github.com/Eggi19/simple-social-media/dtos"
@@ -11,9 +12,11 @@ import (
 )
 
 type UserUsecaseOpts struct {
-	HashAlgorithm     utils.Hasher
-	AuthTokenProvider utils.AuthTokenProvider
-	UserRepository    repositories.UserRepository
+	HashAlgorithm           utils.Hasher
+	AuthTokenProvider       utils.AuthTokenProvider
+	FirebaseMessagingClient *messaging.Client
+	Transactor              repositories.Transactor
+	UserRepository          repositories.UserRepository
 }
 
 type UserUsecase interface {
@@ -22,16 +25,20 @@ type UserUsecase interface {
 }
 
 type UserUsecaseImpl struct {
-	HashAlgorithm     utils.Hasher
-	AuthTokenProvider utils.AuthTokenProvider
-	UserRepository    repositories.UserRepository
+	HashAlgorithm           utils.Hasher
+	AuthTokenProvider       utils.AuthTokenProvider
+	FirebaseMessagingClient *messaging.Client
+	Transactor              repositories.Transactor
+	UserRepository          repositories.UserRepository
 }
 
 func NewUserUsecaseImpl(uuOpts *UserUsecaseOpts) UserUsecase {
 	return &UserUsecaseImpl{
-		HashAlgorithm:     uuOpts.HashAlgorithm,
-		AuthTokenProvider: uuOpts.AuthTokenProvider,
-		UserRepository:    uuOpts.UserRepository,
+		HashAlgorithm:           uuOpts.HashAlgorithm,
+		AuthTokenProvider:       uuOpts.AuthTokenProvider,
+		FirebaseMessagingClient: uuOpts.FirebaseMessagingClient,
+		Transactor:              uuOpts.Transactor,
+		UserRepository:          uuOpts.UserRepository,
 	}
 }
 
@@ -46,7 +53,19 @@ func (u *UserUsecaseImpl) RegisterUser(ctx context.Context, req dtos.UserRegiste
 
 	user := dtos.ConvertUserRegisterData(&req)
 
-	err = u.UserRepository.RegisterUser(ctx, *user)
+	_, err = u.Transactor.WithinTransaction(ctx, func(ctx context.Context) (interface{}, error) {
+		newUser, err := u.UserRepository.RegisterUser(ctx, *user)
+		if err != nil {
+			return nil, err
+		}
+
+		err = u.UserRepository.AddUserToFirestore(ctx, *newUser)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
 	if err != nil {
 		return err
 	}

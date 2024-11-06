@@ -3,7 +3,8 @@ package queries
 const (
 	CreateUser = `
 		INSERT INTO users (name, email, password) VALUES
-		($1, $2, $3);
+		($1, $2, $3)
+		RETURNING id, name, email;
 	`
 
 	GetUserByEmail = `

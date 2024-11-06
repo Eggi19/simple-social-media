@@ -3,58 +3,59 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"strconv"
 
+	"cloud.google.com/go/firestore"
 	"github.com/Eggi19/simple-social-media/custom_errors"
 	"github.com/Eggi19/simple-social-media/entities"
 	"github.com/Eggi19/simple-social-media/repositories/queries"
 )
 
 type UserRepoOpt struct {
-	Db *sql.DB
+	Db              *sql.DB
+	FirestoreClient *firestore.Client
 }
 
 type UserRepository interface {
-	RegisterUser(ctx context.Context, req entities.User) error
+	RegisterUser(ctx context.Context, req entities.User) (*entities.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*entities.User, error)
 	GetUserIdByTweetId(ctx context.Context, tweetId int64) (*entities.User, error)
 	GetUserById(ctx context.Context, userId int64) (*entities.User, error)
 	UpdateFcmToken(ctx context.Context, fcmToken string, userId int64) error
+	AddUserToFirestore(ctx context.Context, user entities.User) error
 }
 
-type UserRepositoryPostgres struct {
-	db *sql.DB
+type UserRepositoryDb struct {
+	db              *sql.DB
+	FirestoreClient *firestore.Client
 }
 
-func NewUserRepositoryPostgres(urOpt *UserRepoOpt) UserRepository {
-	return &UserRepositoryPostgres{
-		db: urOpt.Db,
+func NewUserRepositoryDb(urOpt *UserRepoOpt) UserRepository {
+	return &UserRepositoryDb{
+		db:              urOpt.Db,
+		FirestoreClient: urOpt.FirestoreClient,
 	}
 }
 
-func (r *UserRepositoryPostgres) RegisterUser(ctx context.Context, req entities.User) error {
+func (r *UserRepositoryDb) RegisterUser(ctx context.Context, req entities.User) (*entities.User, error) {
 	var err error
-	var stmt *sql.Stmt
+	u := entities.User{}
 
 	tx := extractTx(ctx)
 	if tx != nil {
-		stmt, err = tx.PrepareContext(ctx, queries.CreateUser)
+		err = tx.QueryRowContext(ctx, queries.CreateUser, req.Name, req.Email, req.Password).Scan(&u.Id, &u.Name, &u.Email)
 	} else {
-		stmt, err = r.db.PrepareContext(ctx, queries.CreateUser)
+		err = r.db.QueryRowContext(ctx, queries.CreateUser, req.Name, req.Email, req.Password).Scan(&u.Id, &u.Name, &u.Email)
 	}
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = stmt.ExecContext(ctx, req.Name, req.Email, req.Password)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return &u, nil
 }
 
-func (r *UserRepositoryPostgres) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
+func (r *UserRepositoryDb) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
 	u := entities.User{}
 
 	var err error
@@ -76,7 +77,7 @@ func (r *UserRepositoryPostgres) GetUserByEmail(ctx context.Context, email strin
 	return &u, nil
 }
 
-func (r *UserRepositoryPostgres) GetUserIdByTweetId(ctx context.Context, tweetId int64) (*entities.User, error) {
+func (r *UserRepositoryDb) GetUserIdByTweetId(ctx context.Context, tweetId int64) (*entities.User, error) {
 	u := entities.User{}
 
 	var err error
@@ -98,7 +99,7 @@ func (r *UserRepositoryPostgres) GetUserIdByTweetId(ctx context.Context, tweetId
 	return &u, nil
 }
 
-func (r *UserRepositoryPostgres) GetUserById(ctx context.Context, userId int64) (*entities.User, error) {
+func (r *UserRepositoryDb) GetUserById(ctx context.Context, userId int64) (*entities.User, error) {
 	u := entities.User{}
 
 	var err error
@@ -120,7 +121,7 @@ func (r *UserRepositoryPostgres) GetUserById(ctx context.Context, userId int64) 
 	return &u, nil
 }
 
-func (r *UserRepositoryPostgres) UpdateFcmToken(ctx context.Context, fcmToken string, userId int64) error {
+func (r *UserRepositoryDb) UpdateFcmToken(ctx context.Context, fcmToken string, userId int64) error {
 	var err error
 
 	tx := extractTx(ctx)
@@ -129,6 +130,22 @@ func (r *UserRepositoryPostgres) UpdateFcmToken(ctx context.Context, fcmToken st
 	} else {
 		_, err = r.db.ExecContext(ctx, queries.GetUserById, fcmToken, userId)
 	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserRepositoryDb) AddUserToFirestore(ctx context.Context, user entities.User) error {
+	userIdStr := strconv.Itoa(int(user.Id))
+	_, err := r.FirestoreClient.Collection("users").Doc(userIdStr).Set(ctx, entities.UserFirestore{
+		Name: user.Name,
+		Email: user.Email,
+		FollowerCount: 0,
+		FollowingCount: 0,
+	})
 
 	if err != nil {
 		return err
