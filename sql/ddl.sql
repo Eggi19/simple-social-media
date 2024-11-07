@@ -1,6 +1,3 @@
-DROP DATABASE IF EXISTS moana_healthcare_db; 
-CREATE DATABASE moana_healthcare_db;
-
 create table users (
 	id BIGSERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
